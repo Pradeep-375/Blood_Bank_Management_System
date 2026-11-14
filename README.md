@@ -55,6 +55,14 @@ Development default logins: `admin@bloodbank.local / Admin@123`, `staff@bloodban
 5. Staff -> Blood Requests -> Approve -> Issue units. 6. Reports -> export CSV. 7. Request more than the stock -> approval blocked.
 
 ## 8. Deployment
+### Vercel
+1. Import `Pradeep-375/Blood_Bank_Management_System` in Vercel and set the project **Root Directory** to `backend`.
+2. Configure `DATABASE_URL` with the Render Postgres **external** connection string and append `?sslmode=require` (or `&sslmode=require` if the URL already has query parameters). Vercel runs outside Render's private network. Keep the database credentials private.
+3. Set `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `STAFF_EMAIL`, and `STAFF_PASSWORD` in Vercel's project environment variables for Production. Use unique, strong passwords; never use the local development defaults.
+4. Deploy. The Express app is exported for Vercel, the API initializes its schema on first request, and the `public` directory supplies frontend assets.
+
+The existing Render free Postgres database is temporary (30-day expiry) and is suitable only for a demo. Upgrade it or use a persistent managed database before relying on stored donor or request records.
+
 ### Render
 1. Push this repository to GitHub and select **New +** -> **Blueprint** in Render.
 2. Connect the repository. Render reads `render.yaml` to create the Docker web service and PostgreSQL database.

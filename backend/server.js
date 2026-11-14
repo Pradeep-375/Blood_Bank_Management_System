@@ -3,11 +3,41 @@ const express = require('express'), pg = require('pg'), bcrypt = require('bcrypt
 pg.types.setTypeParser(1082, v => v); // keep DATE columns as plain 'YYYY-MM-DD'
 const app = express(); app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-const isProduction = process.env.NODE_ENV === 'production';
-const SECRET = process.env.JWT_SECRET || (isProduction ? null : 'dev-secret-change-me');
+const isDeployed = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+const SECRET = process.env.JWT_SECRET || (isDeployed ? null : 'dev-secret-change-me');
 if (!SECRET) throw new Error('JWT_SECRET is required in production');
-const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL || 'postgres://bloodbank:bloodbank@localhost:5432/bloodbank' });
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL || 'postgres://bloodbank:bloodbank@localhost:5432/bloodbank',
+  max: isDeployed ? 3 : 10
+});
 const q = (s, p) => pool.query(s, p).then(r => r.rows);
+let databaseReady;
+const initializeDatabase = () => {
+  if (!databaseReady) {
+    databaseReady = (async () => {
+      await pool.query(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8'));
+      const defaultUsers = [
+        ['Admin', process.env.ADMIN_EMAIL || (isDeployed ? '' : 'admin@bloodbank.local'), process.env.ADMIN_PASSWORD || (isDeployed ? '' : 'Admin@123'), 'admin'],
+        ['Blood Bank Staff', process.env.STAFF_EMAIL || (isDeployed ? '' : 'staff@bloodbank.local'), process.env.STAFF_PASSWORD || (isDeployed ? '' : 'Staff@123'), 'staff']
+      ];
+      for (const [name, email, password, role] of defaultUsers) {
+        if (!email || !password) throw new Error(`${role.toUpperCase()}_EMAIL and ${role.toUpperCase()}_PASSWORD are required in production`);
+        await q('insert into users(name,email,password_hash,role) values($1,$2,$3,$4) on conflict(email) do nothing',
+          [name, email, await bcrypt.hash(password, 10), role]);
+      }
+    })().catch(e => {
+      databaseReady = null;
+      throw e;
+    });
+  }
+  return databaseReady;
+};
+app.use('/api', (req, res, next) => {
+  initializeDatabase().then(() => next()).catch(e => {
+    console.error('Database initialization failed', e);
+    res.status(503).json({ error: 'Database unavailable' });
+  });
+});
 const err = (status, message) => Object.assign(new Error(message), { status });
 const wrap = f => (req, res, next) => f(req, res, next).catch(e => {
   if (!e.status) console.error(e);
@@ -141,26 +171,16 @@ app.get('/api/reports/:name', auth('admin', 'staff'), wrap(async (req, res) => {
   res.type('text/csv').attachment(req.params.name + '-report.csv').send([cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n')); }));
 
 app.get('/health', (req, res) => res.send('ok'));
-(async () => {
-  for (let i = 0; i < 30; i++) {
-    try { await pool.query(fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8')); break; }
-    catch (e) { console.log('Waiting for database...', e.message); await new Promise(r => setTimeout(r, 2000)); } }
-  const defaultUsers = [
-    ['Admin', process.env.ADMIN_EMAIL || (isProduction ? '' : 'admin@bloodbank.local'), process.env.ADMIN_PASSWORD || (isProduction ? '' : 'Admin@123'), 'admin'],
-    ['Blood Bank Staff', process.env.STAFF_EMAIL || (isProduction ? '' : 'staff@bloodbank.local'), process.env.STAFF_PASSWORD || (isProduction ? '' : 'Staff@123'), 'staff']
-  ];
-  for (const [n, e, p, r] of defaultUsers) {
-    if (!e || !p) throw new Error(`${r.toUpperCase()}_EMAIL and ${r.toUpperCase()}_PASSWORD are required in production`);
-    await q('insert into users(name,email,password_hash,role) values($1,$2,$3,$4) on conflict(email) do nothing', [n, e, await bcrypt.hash(p, 10), r]);
-  }
+if (require.main === module) {
   const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log('====================================');
+    console.log('BLOOD BANK MANAGEMENT SYSTEM');
+    console.log('====================================');
+    console.log('Server running on port: ' + PORT);
+    console.log('Application URL: http://localhost:' + PORT);
+    console.log('====================================');
+  });
+}
 
-app.listen(PORT, () => {
-  console.log('====================================');
-  console.log('BLOOD BANK MANAGEMENT SYSTEM');
-  console.log('====================================');
-  console.log('Server running on port: ' + PORT);
-  console.log('Application URL: http://localhost:' + PORT);
-  console.log('====================================');
-});
-})();
+module.exports = app;
