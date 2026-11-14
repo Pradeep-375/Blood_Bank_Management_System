@@ -47,7 +47,7 @@ cd backend && npm install && npm start
 ```
 Env vars: `DATABASE_URL`, `JWT_SECRET`, `PORT`. Tables and default users are created automatically.
 
-Default logins: `admin@bloodbank.local / Admin@123`, `staff@bloodbank.local / Staff@123` (change after first login). Donors and hospitals self-register.
+Development default logins: `admin@bloodbank.local / Admin@123`, `staff@bloodbank.local / Staff@123`. These defaults are disabled in production; donors and hospitals self-register.
 
 ## 7. Testing (manual scenario)
 1. Register a donor (O+) and a hospital. 2. Login as staff -> Donations & Stock -> add a unit for the donor.
@@ -55,10 +55,19 @@ Default logins: `admin@bloodbank.local / Admin@123`, `staff@bloodbank.local / St
 5. Staff -> Blood Requests -> Approve -> Issue units. 6. Reports -> export CSV. 7. Request more than the stock -> approval blocked.
 
 ## 8. Deployment
+### Render
+1. Push this repository to GitHub and select **New +** -> **Blueprint** in Render.
+2. Connect the repository. Render reads `render.yaml` to create the Docker web service and PostgreSQL database.
+3. Enter unique values for `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `STAFF_EMAIL`, and `STAFF_PASSWORD` when prompted. Render generates `JWT_SECRET` and connects the database automatically.
+4. Open the deployed service URL after its health check passes.
+
+The included Blueprint uses Render's free plans for evaluation. Free web services can sleep when idle, and free PostgreSQL databases expire after 30 days; use suitable paid plans for persistent production use. Never use the development default credentials for a live deployment.
+
+### Kubernetes
 ```
 docker build -t bloodbank-app:1.0 ./backend
 kubectl apply -f k8s/postgres.yaml -f k8s/app.yaml
 kubectl get pods,svc
 ```
 Minikube: `minikube image load bloodbank-app:1.0` then `minikube service bloodbank-service`. Docker Desktop K8s: open http://localhost:30080.
-Before real use change `JWT_SECRET` and DB password in the Secret.
+Set a strong `JWT_SECRET`, database credentials, and unique admin/staff email and password environment variables in the Kubernetes Secret before deployment.
