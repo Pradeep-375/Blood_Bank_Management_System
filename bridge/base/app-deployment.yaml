@@ -1,0 +1,37 @@
+#! app-deployment.yaml
+# Generated code, do not edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: app
+    namespace: blood-bank-system
+    labels:
+        com.docker.compose.project: blood-bank-system
+        com.docker.compose.service: app
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            com.docker.compose.project: blood-bank-system
+            com.docker.compose.service: app
+    strategy:
+        type: Recreate
+    template:
+        metadata:
+            labels:
+                com.docker.compose.project: blood-bank-system
+                com.docker.compose.service: app
+                com.docker.compose.network.default: "true"
+        spec:
+            containers:
+                - name: app
+                  image: blood-bank-system-app
+                  imagePullPolicy: IfNotPresent
+                  env:
+                    - name: DATABASE_URL
+                      value: "postgres://bloodbank:bloodbank@db:5432/bloodbank"
+                    - name: JWT_SECRET
+                      value: "change-me-in-production"
+                  ports:
+                    - name: app-3000
+                      containerPort: 3000

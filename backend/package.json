@@ -1,0 +1,13 @@
+{
+  "name": "blood-bank-system",
+  "version": "1.0.0",
+  "description": "Blood Bank and Donor Management System",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.12.0"
+  }
+}

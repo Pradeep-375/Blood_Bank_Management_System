@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: bloodbank, POSTGRES_PASSWORD: bloodbank, POSTGRES_DB: bloodbank }
+    volumes: [pgdata:/var/lib/postgresql/data]
+  app:
+    build: ./backend
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: postgres://bloodbank:bloodbank@db:5432/bloodbank
+      JWT_SECRET: change-me-in-production
+    depends_on: [db]
+volumes: { pgdata: {} }

@@ -1,0 +1,8 @@
+#! 0-blood-bank-system-namespace.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: blood-bank-system
+    labels:
+        com.docker.compose.project: blood-bank-system
