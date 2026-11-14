@@ -45,7 +45,7 @@ Browser SPA (vanilla JS) -> Express REST API (`backend/server.js`) -> PostgreSQL
 ```
 cd backend && npm install && npm start
 ```
-Env vars: `DATABASE_URL`, `JWT_SECRET`, `PORT`. Tables and default users are created automatically.
+Env vars: `DATABASE_URL`, `JWT_SECRET`, `PORT`. Set `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `STAFF_EMAIL`, and `STAFF_PASSWORD` to override the seeded accounts. Tables and users are created automatically.
 
 Development default logins: `admin@bloodbank.local / Admin@123`, `staff@bloodbank.local / Staff@123`. These defaults are disabled in production; donors and hospitals self-register.
 
